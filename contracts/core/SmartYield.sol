@@ -263,11 +263,11 @@ contract SmartYield is
         // ---
 
         address buyer = msg.sender;
-        console.log("_before takeUnderlying");
+        //console.log("_before takeUnderlying");
         IProvider(pool)._takeUnderlying(buyer, principalAmount_);
-        console.log("_takeUnderlying");
+        //console.log("_takeUnderlying");
         IProvider(pool)._depositProvider(principalAmount_, 0);
-        console.log("_depositProvider");
+        //console.log("_depositProvider");
         SeniorBond memory b =
             SeniorBond(
                 principalAmount_,
@@ -276,12 +276,12 @@ contract SmartYield is
                 uint256(1 days) * uint256(forDays_) + issuedAt,
                 false
             );
-        console.log("1");
+        //console.log("1");
         _mintBond(buyer, b);
-        console.log("2");
+        //console.log("2");
 
         emit BuySeniorBond(buyer, seniorBondId, principalAmount_, gain, forDays_);
-        console.log("3");
+        //console.log("3");
         return gain;
     }
 
@@ -438,10 +438,10 @@ contract SmartYield is
       public override
     returns (uint256)
     {
-      console.log(underlyingTotal());
-      console.log(underlyingLoanable());
-      console.log(principalAmount_);
-      console.log(forDays_);
+      //console.log(underlyingTotal());
+      //console.log(underlyingLoanable());
+      //console.log(principalAmount_);
+      //console.log(forDays_);
       return IBondModel(IController(controller).bondModel()).gain(
         underlyingTotal(),
         underlyingLoanable(),
