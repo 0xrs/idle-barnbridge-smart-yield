@@ -30,13 +30,13 @@ oracle: 0x09635F643e140090A9A8Dcd712eD6285858ceBef
 Tranfer DAI from DAI millionaire to deployer...
 Approve Idle Provider to spend DAI...
 Buying Junior Tokens...
-Junior Tokens Bought
 Buying Senior Bond...
-Bought senior bond
-Idle Average APR: 11442557546020946485
-SY abondGain: 6550097633005452
+Check senior bond added...
+Owner of Senior Bond NFT 1: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Idle Average APR: 11472534407419768886
+SY abondGain: 6550097625542128
 SY abondPaid: 0
-SY abondDebt: 6550097633005452
+SY abondDebt: 6550097625542128
 ```
 
 ##
