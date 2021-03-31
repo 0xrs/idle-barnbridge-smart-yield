@@ -21,16 +21,9 @@ module.exports = {
   networks: {
       hardhat: {
           forking: {
-              url: 'https://eth-mainnet.alchemyapi.io/v2/yVzwGvPX6dd9TpUR4k4qWAk7ZliQcrWl',
-              //blockNumber: 11966746, //
+              url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
           },
      },
-     // hardhatkovan: {
-     //     forking: {
-     //         url: 'https://eth-kovan.alchemyapi.io/v2/yVzwGvPX6dd9TpUR4k4qWAk7ZliQcrWl',
-     //         //blockNumber: 11966746, //
-     //     },
-     // },
      mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.WEB3_INFURA_PROJECT_ID}`,
       accounts: {
