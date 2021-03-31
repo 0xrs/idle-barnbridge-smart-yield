@@ -11,8 +11,7 @@ abstract contract JuniorToken is ERC20 {
       string memory symbol_,
       uint8 decimals_
     )
-      ERC20(name_, symbol_)
-    {
+      ERC20(name_, symbol_) {
       _setupDecimals(decimals_);
     }
 

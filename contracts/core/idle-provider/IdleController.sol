@@ -19,6 +19,7 @@ import "../../interfaces/IController.sol";
 import "../../oracle/IYieldOracle.sol";
 import "../../oracle/IYieldOraclelizable.sol";
 import "./IdleProvider.sol";
+import "hardhat/console.sol";
 
 contract IdleController is IController, IIdleCumulator, IYieldOraclelizable {
     using SafeMath for uint256;
@@ -112,10 +113,14 @@ contract IdleController is IController, IIdleCumulator, IYieldOraclelizable {
     } */
 
     function providerRatePerDay() public override returns (uint256) {
-        return MathUtils.min(
-        MathUtils.min(BOND_MAX_RATE_PER_DAY, (IIdleToken(IdleProvider(pool).cToken()).getAvgAPR()).div(365)),
-        IYieldOracle(oracle).consult(1 days)
-      );
+        if (IYieldOracle(oracle).consult(1 days) == 0) {
+            return MathUtils.min(BOND_MAX_RATE_PER_DAY, (IIdleToken(IdleProvider(pool).cToken()).getAvgAPR()).div(365));
+        }
+        else {
+            return MathUtils.min(
+            MathUtils.min(BOND_MAX_RATE_PER_DAY, (IIdleToken(IdleProvider(pool).cToken()).getAvgAPR()).div(365)),
+            IYieldOracle(oracle).consult(1 days));
+        }
     }
 
     function cumulatives() public override returns (uint256) {

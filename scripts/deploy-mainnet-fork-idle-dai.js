@@ -5,7 +5,7 @@
 // Runtime Environment's members available in the global scope.
 const hre = require("hardhat");
 const { Wallet, BigNumber } = require('ethers');
-
+const erc20abi = require("./erc20abi.json");
 const A_HOUR = 60 * 60;
 const seniorBondCONF = { name: 'BarnBridge IdleDAI sBOND', symbol: 'bbsidleDAI' };
 const juniorBondCONF = { name: 'BarnBridge IdleDAI jBOND', symbol: 'bbjidleDAI' };
@@ -18,6 +18,7 @@ const IDLE_DAI_CONTRACT = "0x3fe7940616e5bc47b0775a0dccf6237893353bb4";
 const IDLE_GOV_TOKEN = "0x875773784Af8135eA0ef43b5a374AaD105c5D39e";
 const DAI_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f";
 const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+const DAI_MILLIONAIRE = '0xaa38738bbe31af8bff84f440540aec58b5b4fb97';
 
 const uniswapPath = [IDLE_GOV_TOKEN, WETH, DAI_ADDRESS];
 
@@ -48,7 +49,7 @@ async function main() {
     await juniorBond.deployed();
     console.log("---");
     const Controller = await hre.ethers.getContractFactory("IdleController");
-    const controller = await Controller.deploy(pool.address, smartYield.address, bondModel.address, uniswapPath);
+    const controller = await Controller.deploy(pool.address, smartYield.address, bondModel.address);
     await controller.deployed();
     console.log("---");
     const Oracle = await hre.ethers.getContractFactory("YieldOracle");
@@ -79,8 +80,29 @@ async function main() {
     console.log('juniorBond:', juniorBond.address);
     console.log('controller:', controller.address);
     console.log('oracle:', oracle.address);
+
+    await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [DAI_MILLIONAIRE]}
+    )
+    let signer = await ethers.provider.getSigner(DAI_MILLIONAIRE);
+    //let idleContract = new ethers.Contract(idleAddress, erc20abi, signer);
+    let daiContract = new ethers.Contract(DAI_ADDRESS, erc20abi, signer);
+    await daiContract.transfer(deployerSign.address, daiContract.balanceOf(signer._address));
+    daiContract = new ethers.Contract(DAI_ADDRESS, erc20abi, deployerSign);
+    await daiContract.approve(pool.address, daiContract.balanceOf(deployerSign.address));
+    ts = Math.floor(Date.now() / 1000);
+    await smartYield.buyTokens(e18(10), 1, ts+180);
+    console.log("junior bond bought");
+    console.log(await smartYield.balanceOf(deployerSign.address));
+    // await smartYield.buyJuniorBond(smartYield.balanceOf(deployerSign.address), e18(ts+10*24*60*60), e18(ts+600));
+    await smartYield.buyBond(e18(1), 0, e18(ts+180), 10);
+    // console.log("SeniorBond bought");
 }
 
+const e18 = (n) => {
+    return ethers.utils.parseEther(n.toString());
+}
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main()
