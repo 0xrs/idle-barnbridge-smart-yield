@@ -6,8 +6,12 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./../external-interfaces/idle/IIdleToken.sol";
-import "./../external-interfaces/idle/IIdleController.sol";
+import "../../external-interfaces/idle/IIdleToken.sol";
+import "../../external-interfaces/idle/IIdleController.sol";
+
+import "../../interfaces/IProvider.sol";
+import "./IdleController.sol";
+import "./IIdleCumulator.sol";
 
 contract IdleProvider is IProvider {
     using SafeMath for uint256;
@@ -74,18 +78,15 @@ contract IdleProvider is IProvider {
       _;
     }
 
-    constructor(address cToken_)
-    {
+    constructor(address cToken_, address uToken_) {
         cToken = cToken_;
-        uToken = ICToken(cToken_).underlying();
+        uToken = uToken_;
     }
 
     function setup(
         address smartYield_,
         address controller_
-    )
-      external
-    {
+    ) external {
         require(
           false == _setup,
           "PPC: already setup"
@@ -120,9 +121,7 @@ contract IdleProvider is IProvider {
       updateAllowances();
     }
 
-    function updateAllowances()
-      public
-    {
+    function updateAllowances() public {
         //IERC20 rewardToken = IERC20(IComptroller(ICToken(cToken).comptroller()).getCompAddress());
 
         uint256 controllerRewardAllowance;
@@ -137,10 +136,7 @@ contract IdleProvider is IProvider {
   // externals
 
     // take underlyingAmount_ from from_
-    function _takeUnderlying(address from_, uint256 underlyingAmount_)
-      external override
-      onlySmartYieldOrController
-    {
+    function _takeUnderlying(address from_, uint256 underlyingAmount_) external override onlySmartYieldOrController {
         uint256 balanceBefore = IERC20(uToken).balanceOf(address(this));
         IERC20(uToken).safeTransferFrom(from_, address(this), underlyingAmount_);
         uint256 balanceAfter = IERC20(uToken).balanceOf(address(this));
@@ -151,10 +147,7 @@ contract IdleProvider is IProvider {
     }
 
     // transfer away underlyingAmount_ to to_
-    function _sendUnderlying(address to_, uint256 underlyingAmount_)
-      external override
-      onlySmartYield
-    {
+    function _sendUnderlying(address to_, uint256 underlyingAmount_) external override onlySmartYield {
         uint256 balanceBefore = IERC20(uToken).balanceOf(to_);
         IERC20(uToken).safeTransfer(to_, underlyingAmount_);
         uint256 balanceAfter = IERC20(uToken).balanceOf(to_);
@@ -165,45 +158,32 @@ contract IdleProvider is IProvider {
     }
 
     // deposit underlyingAmount_ with the liquidity provider, callable by smartYield or controller
-    function _depositProvider(uint256 underlyingAmount_, uint256 takeFees_)
-      external override
-      onlySmartYieldOrController
-    {
+    function _depositProvider(uint256 underlyingAmount_, uint256 takeFees_) external override onlySmartYieldOrController {
         _depositProviderInternal(underlyingAmount_, takeFees_);
     }
 
     // deposit underlyingAmount_ with the liquidity provider, store resulting cToken balance in cTokenBalance
-    function _depositProviderInternal(uint256 underlyingAmount_, uint256 takeFees_)
-      internal
-    {
+    function _depositProviderInternal(uint256 underlyingAmount_, uint256 takeFees_) internal {
         // underlyingFees += takeFees_
         underlyingFees = underlyingFees.add(takeFees_);
 
-        IIdleCumulator(controller)._beforeCTokenBalanceChange();
+        //IIdleCumulator(controller)._beforeCTokenBalanceChange();
         IERC20(uToken).approve(address(cToken), underlyingAmount_);
 
-        //uint256 err = ICToken(cToken).mint(underlyingAmount_);
-        //require(0 == err, "PPC: _depositProvider mint");
-        ICToken(cToken).mintIdleToken(underlyingAmount_, true, referral);
-        IIdleCumulator(controller)._afterCTokenBalanceChange(cTokenBalance);
+        IIdleToken(cToken).mintIdleToken(underlyingAmount_, true, referral);
+        //IIdleCumulator(controller)._afterCTokenBalanceChange(cTokenBalance);
 
         // cTokenBalance is used to compute the pool yield, make sure no one interferes with the computations between deposits/withdrawls
-        //cTokenBalance = ICTokenErc20(cToken).balanceOf(address(this));
         cTokenBalance = IERC20(cToken).balanceOf(address(this));
     }
 
     // withdraw underlyingAmount_ from the liquidity provider, callable by smartYield
-    function _withdrawProvider(uint256 underlyingAmount_, uint256 takeFees_)
-      external override
-      onlySmartYield
-    {
-      _withdrawProviderInternal(underlyingAmount_, takeFees_);
+    function _withdrawProvider(uint256 underlyingAmount_, uint256 takeFees_) external override onlySmartYield {
+        _withdrawProviderInternal(underlyingAmount_, takeFees_);
     }
 
     // withdraw underlyingAmount_ from the liquidity provider, store resulting cToken balance in cTokenBalance
-    function _withdrawProviderInternal(uint256 underlyingAmount_, uint256 takeFees_)
-      internal
-    {
+    function _withdrawProviderInternal(uint256 underlyingAmount_, uint256 takeFees_) internal {
         // underlyingFees += takeFees_;
         underlyingFees = underlyingFees.add(takeFees_);
 
@@ -211,33 +191,26 @@ contract IdleProvider is IProvider {
         IIdleCumulator(controller)._beforeCTokenBalanceChange();
         //uint256 err = ICToken(cToken).redeemUnderlying(underlyingAmount_);
         //require(0 == err, "PPC: _withdrawProvider redeemUnderlying");
-        ICToken(cToken).redeemIdleToken(underlyingAmount_, true, referral);
+        IIdleToken(cToken).redeemIdleToken(underlyingAmount_);
         IIdleCumulator(controller)._afterCTokenBalanceChange(cTokenBalance);
 
         // cTokenBalance is used to compute the pool yield, make sure no one interferes with the computations between deposits/withdrawls
         cTokenBalance = IERC20(cToken).balanceOf(address(this));
     }
 
-    function transferFees()
-      external
-      override
-    {
-      _withdrawProviderInternal(underlyingFees, 0);
-      underlyingFees = 0;
+    function transferFees() external override {
+        _withdrawProviderInternal(underlyingFees, 0);
+        underlyingFees = 0;
 
-      uint256 fees = IERC20(uToken).balanceOf(address(this));
-      address to = IdleController(controller).feesOwner();
+        uint256 fees = IERC20(uToken).balanceOf(address(this));
+        address to = IdleController(controller).feesOwner();
 
-      IERC20(uToken).safeTransfer(to, fees);
-
-      emit TransferFees(msg.sender, to, fees);
+        IERC20(uToken).safeTransfer(to, fees);
+        emit TransferFees(msg.sender, to, fees);
     }
 
     // current total underlying balance, as measured by pool, without fees
-    function underlyingBalance()
-      external virtual override
-    returns (uint256)
-    {
+    function underlyingBalance() external virtual override returns (uint256) {
         // https://compound.finance/docs#protocol-math
         // (total balance in underlying) - underlyingFees
         // cTokenBalance * exchangeRateCurrent() / EXP_SCALE - underlyingFees;
@@ -247,10 +220,7 @@ contract IdleProvider is IProvider {
 
   // public
     // get exchangeRateCurrent from compound and cache it for the current block
-    function exchangeRateCurrent()
-      public virtual
-    returns (uint256)
-    {
+    function exchangeRateCurrent() public virtual returns (uint256) {
       // only once per block
       if (block.timestamp > exchangeRateCurrentCachedAt) {
         exchangeRateCurrentCachedAt = block.timestamp;
@@ -261,7 +231,7 @@ contract IdleProvider is IProvider {
 
     function updateGovTokensList() public {
         uint256 govTokensLength = IIdleToken(cToken).getGovTokensAmounts(address(1)).length;
-        govTokens = [];
+        delete govTokens;
         for (uint i=0; i<govTokensLength; i++) {
             govTokens.push(IIdleToken(cToken).govTokens(i));
         }
@@ -270,18 +240,4 @@ contract IdleProvider is IProvider {
     function getGovTokens() public view returns (address[] memory) {
         return govTokens;
     }
-  // /public
-
-  // internals
-
-    // call comptroller.enterMarkets()
-    // needs to be called only once BUT before any interactions with the provider
-    /* function _enterMarket()
-      internal
-    {
-        address[] memory markets = new address[](1);
-        markets[0] = cToken;
-        uint256[] memory err = IComptroller(ICToken(cToken).comptroller()).enterMarkets(markets);
-        require(err[0] == 0, "PPC: _enterMarket");
-    } */
 }
