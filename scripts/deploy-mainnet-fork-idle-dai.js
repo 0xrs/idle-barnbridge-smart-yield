@@ -5,7 +5,7 @@
 // Runtime Environment's members available in the global scope.
 const hre = require("hardhat");
 const { Wallet, BigNumber } = require('ethers');
-const erc20abi = require("./erc20abi.json");
+const erc20abi = require("./abis/erc20abi.json");
 const A_HOUR = 60 * 60;
 const seniorBondCONF = { name: 'BarnBridge IdleDAI sBOND', symbol: 'bbsidleDAI' };
 const juniorBondCONF = { name: 'BarnBridge IdleDAI jBOND', symbol: 'bbjidleDAI' };
@@ -20,7 +20,7 @@ const DAI_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f";
 const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 const DAI_MILLIONAIRE = '0xaa38738bbe31af8bff84f440540aec58b5b4fb97';
 
-const uniswapPath = [IDLE_GOV_TOKEN, WETH, DAI_ADDRESS];
+//const uniswapPath = [IDLE_GOV_TOKEN, WETH, DAI_ADDRESS];
 
 async function main() {
     const [deployerSign, ...signers] = (await ethers.getSigners());
@@ -31,31 +31,24 @@ async function main() {
     const BondModel = await hre.ethers.getContractFactory("BondModelV1");
     const bondModel = await BondModel.deploy();
     await bondModel.deployed();
-    console.log("---");
     const Provider = await hre.ethers.getContractFactory("IdleProvider");
     const pool = await Provider.deploy(IDLE_DAI_CONTRACT, DAI_ADDRESS);
     await pool.deployed();
-    console.log("---");
     const SmartYield = await hre.ethers.getContractFactory("SmartYield");
     const smartYield = await SmartYield.deploy(juniorTokenCONF.name, juniorTokenCONF.symbol, BigNumber.from(decimals));
     await smartYield.deployed();
-    console.log("---");
     const SeniorBond = await hre.ethers.getContractFactory("SeniorBond");
     const seniorBond = await SeniorBond.deploy(smartYield.address, seniorBondCONF.name, seniorBondCONF.symbol);
     await seniorBond.deployed();
-    console.log("---");
     const JuniorBond = await hre.ethers.getContractFactory("JuniorBond");
     const juniorBond = await JuniorBond.deploy(smartYield.address, juniorBondCONF.name, juniorBondCONF.symbol);
     await juniorBond.deployed();
-    console.log("---");
     const Controller = await hre.ethers.getContractFactory("IdleController");
     const controller = await Controller.deploy(pool.address, smartYield.address, bondModel.address);
     await controller.deployed();
-    console.log("---");
     const Oracle = await hre.ethers.getContractFactory("YieldOracle");
     const oracle = await Oracle.deploy(controller.address, oracleCONF.windowSize, oracleCONF.granularity);
     await oracle.deployed();
-    console.log("---");
     await controller.setOracle(oracle.address);
     await controller.setFeesOwner(feesOwner);
     await smartYield.setup(controller.address, pool.address, seniorBond.address, juniorBond.address);
@@ -70,7 +63,6 @@ async function main() {
     console.log('IdleGov:', IDLE_GOV_TOKEN);
     console.log('DAI:', DAI_ADDRESS);
     console.log('WETH:', WETH);
-    console.log('uniswapPath:', uniswapPath);
     console.log('');
     console.log('DEPLOYED ----');
     console.log('bondModel:', bondModel.address);
