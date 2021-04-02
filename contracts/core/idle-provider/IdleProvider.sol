@@ -5,7 +5,9 @@ pragma abicoder v2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
+import "../../lib/uniswap/UniswapV2Library.sol";
+import "../../lib/uniswap/UniswapV2OracleLibrary.sol";
+import "../../lib/uniswap/IUniswapV2Router02.sol";
 import "../../external-interfaces/idle/IIdleToken.sol";
 import "../../external-interfaces/idle/IIdleController.sol";
 
@@ -20,7 +22,8 @@ contract IdleProvider is IProvider {
     address public referral;
     uint256 public constant MAX_UINT256 = uint256(-1);
     uint256 public constant EXP_SCALE = 1e18;
-
+    address public constant UNISWAP_ROUTER_V2 = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    
     address public override smartYield;
 
     address public override controller;
@@ -43,6 +46,8 @@ contract IdleProvider is IProvider {
     bool public _setup;
 
     address[] public govTokens;
+
+    mapping(address=>address[]) public uniswapPaths;
 
     event TransferFees(address indexed caller, address indexed feesOwner, uint256 fees);
 
@@ -81,6 +86,7 @@ contract IdleProvider is IProvider {
     constructor(address cToken_, address uToken_) {
         cToken = cToken_;
         uToken = uToken_;
+        updateGovTokensList();
     }
 
     function setup(
@@ -192,6 +198,7 @@ contract IdleProvider is IProvider {
         //uint256 err = ICToken(cToken).redeemUnderlying(underlyingAmount_);
         //require(0 == err, "PPC: _withdrawProvider redeemUnderlying");
         IIdleToken(cToken).redeemIdleToken(underlyingAmount_);
+        convertGovTokensToUnderlying();
         IIdleCumulator(controller)._afterCTokenBalanceChange(cTokenBalance);
 
         // cTokenBalance is used to compute the pool yield, make sure no one interferes with the computations between deposits/withdrawls
@@ -216,6 +223,25 @@ contract IdleProvider is IProvider {
         // cTokenBalance * exchangeRateCurrent() / EXP_SCALE - underlyingFees;
         return cTokenBalance.mul(exchangeRateCurrent()).div(EXP_SCALE).sub(underlyingFees);
     }
+
+    function setUniswapPaths() internal {
+        address[] memory rewardTokens = getGovTokens();
+        for (uint i=0; i<rewardTokens.length; i++) {
+            address[] memory path = new address[](3);
+            path[0] = rewardTokens[i];
+            path[1] = IUniswapV2Router02(uniswapRouter()).WETH();
+            path[2] = uToken;
+            uniswapPaths[rewardTokens[i]] = path;
+        }
+    }
+
+    function convertGovTokensToUnderlying() internal {
+        for (uint i=0; i<govTokens.length; i++) {
+            IUniswapV2Router02(UNISWAP_ROUTER_V2).
+            swapExactTokensForTokens(IERC20(govTokens[i]).balanceOf(address(this)),
+            0, uniswapPaths[govTokens[i]], msg.sender, block.timestamp);
+        }
+    }
   // /externals
 
   // public
@@ -235,9 +261,16 @@ contract IdleProvider is IProvider {
         for (uint i=0; i<govTokensLength; i++) {
             govTokens.push(IIdleToken(cToken).govTokens(i));
         }
+        setUniswapPaths();
     }
 
     function getGovTokens() public view returns (address[] memory) {
         return govTokens;
     }
+
+    function uniswapRouter() public view virtual returns(address) {
+        // mockable
+        return UNISWAP_ROUTER_V2;
+    }
+
 }

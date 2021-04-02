@@ -53,7 +53,7 @@ contract IdleController is IController, IIdleCumulator, IYieldOraclelizable {
     uint256 public underlyingDecimals;
 
     // uniswap path for Gov tokens to underlying
-    mapping(address=>address[]) public uniswapPaths;
+    //mapping(address=>address[]) public uniswapPaths;
 
     event Harvest(address indexed caller, uint256 compRewardTotal, uint256 compRewardSold, uint256 underlyingPoolShare, uint256 underlyingReward, uint256 harvestCost); //TODO
 
@@ -77,7 +77,7 @@ contract IdleController is IController, IIdleCumulator, IYieldOraclelizable {
       smartYield = smartYield_;
       //underlyingDecimals = ERC20(ICToken(CompoundProvider(pool).cToken()).underlying()).decimals();
       underlyingDecimals = 18;
-      setUniswapPaths(pool_);
+      //setUniswapPaths(pool_);
       setBondModel(bondModel_);
       updateAllowances();
     }
@@ -134,14 +134,4 @@ contract IdleController is IController, IIdleCumulator, IYieldOraclelizable {
       return cTokens_.mul(exchangeRate_).div(EXP_SCALE);
     }
 
-    function setUniswapPaths(address pool_) internal {
-        address[] memory rewardTokens = IdleProvider(pool_).getGovTokens();
-        for (uint i=0; i<rewardTokens.length; i++) {
-            address[] memory path = new address[](3);
-            path[0] = rewardTokens[i];
-            path[1] = IUniswapV2Router02(uniswapRouter()).WETH();
-            path[2] = IdleProvider(pool_).uToken();
-            uniswapPaths[rewardTokens[i]] = path;
-        }
-    }
 }
