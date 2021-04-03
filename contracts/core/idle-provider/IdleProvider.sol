@@ -23,7 +23,7 @@ contract IdleProvider is IProvider {
     uint256 public constant MAX_UINT256 = uint256(-1);
     uint256 public constant EXP_SCALE = 1e18;
     address public constant UNISWAP_ROUTER_V2 = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    
+
     address public override smartYield;
 
     address public override controller;
@@ -224,7 +224,7 @@ contract IdleProvider is IProvider {
         return cTokenBalance.mul(exchangeRateCurrent()).div(EXP_SCALE).sub(underlyingFees);
     }
 
-    function setUniswapPaths() internal {
+    function setUniswapPathsAndApprove() internal {
         address[] memory rewardTokens = getGovTokens();
         for (uint i=0; i<rewardTokens.length; i++) {
             address[] memory path = new address[](3);
@@ -232,6 +232,7 @@ contract IdleProvider is IProvider {
             path[1] = IUniswapV2Router02(uniswapRouter()).WETH();
             path[2] = uToken;
             uniswapPaths[rewardTokens[i]] = path;
+            require(IERC20(rewardTokens[i]).approve(address(UNISWAP_ROUTER_V2), MAX_UINT256), 'approve failed.');
         }
     }
 
@@ -261,7 +262,7 @@ contract IdleProvider is IProvider {
         for (uint i=0; i<govTokensLength; i++) {
             govTokens.push(IIdleToken(cToken).govTokens(i));
         }
-        setUniswapPaths();
+        setUniswapPathsAndApprove();
     }
 
     function getGovTokens() public view returns (address[] memory) {

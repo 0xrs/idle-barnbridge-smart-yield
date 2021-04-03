@@ -196,7 +196,6 @@ contract SmartYield is
         // debt share is forfeit, and only diff is returned to user
         // (tokenAmount_ * price()) / EXP_SCALE - forfeits
         uint256 toPay = tokenAmount_.mul(price()).div(EXP_SCALE).sub(forfeits);
-
         require(
           toPay >= minUnderlying_,
           "SY: sellTokens minUnderlying"
@@ -205,11 +204,9 @@ contract SmartYield is
         // ---
 
         address seller = msg.sender;
-
         _burn(seller, tokenAmount_);
         IProvider(pool)._withdrawProvider(toPay, 0);
         IProvider(pool)._sendUnderlying(seller, toPay);
-
         emit SellTokens(seller, tokenAmount_, toPay, forfeits);
     }
 

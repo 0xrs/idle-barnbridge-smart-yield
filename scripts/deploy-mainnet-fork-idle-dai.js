@@ -101,8 +101,22 @@ async function main() {
     // await smartYield.buyJuniorBond(smartYield.balanceOf(deployerSign.address), e18(ts+10*24*60*60), e18(ts+600));
     console.log("Buying Senior Bond...");
     await smartYield.buyBond(e18(1), 0, e18(ts+180), 10);
+
     console.log("Check senior bond added...");
     console.log("Owner of Senior Bond NFT 1: " + (await seniorBond.ownerOf(1)));
+    var daiBalance = BigNumber.from(await daiContract.balanceOf(deployerSign.address)).toString();
+    //console.log(daiBalance);
+    console.log("Approving junior tokens...");
+    var juniorTokenBalance = await smartYield.balanceOf(deployerSign.address);
+    //console.log(BigNumber.from(juniorTokenBalance).toString());
+    await smartYield.approve(pool.address, juniorTokenBalance);
+    console.log("Junior Tokens Sale...");
+    await smartYield.sellTokens(1, 0, ts+600);
+    console.log("Buy Junior Bond...");
+    juniorTokenBalance = await smartYield.balanceOf(deployerSign.address);
+    await smartYield.buyJuniorBond(juniorTokenBalance, ts+50*24*60*60, ts+600);
+    var daiBalance2 = BigNumber.from(await daiContract.balanceOf(deployerSign.address)).toString();
+    //console.log(daiBalance2);
     console.log("Idle Average APR: " + BigNumber.from(await idleDai.getAvgAPR()).toString());
     console.log("SY abondGain: " + BigNumber.from(await smartYield.abondGain()).toString());
     console.log("SY abondPaid: " + BigNumber.from(await smartYield.abondPaid()).toString());
