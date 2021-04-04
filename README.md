@@ -2,9 +2,30 @@
 
 # Idle Barnbridge Smart Yield
 
+# Abstract
+
+Idle Finance allows you to get the best yield on your crypto assets by optimally lending
+to different protocols based on yield and risk scoring.
+
+However this yield is not fixed and can change based on the yield received from underlying protocols.
+Combining Idle with Barnbridge allows people to get a fixed yield on their assets by incentivizing
+another party who is willing to take on the variable rate risk and speculate on that yield.
+
 ## Specs
 
 [SPEC.md](./SPEC.md)
+
+# Folder Structure
+
+`contracts/core`: Contains the core contracts for the protocol which includes the SmartYield contract and Idle Provider contracts.
+
+`contracts/external-interfaces`: Contains relevant interfaces for the idle protocol.
+
+`contracts/interfaces`: Contains interfaces for SmartYield and Bond NFTs
+
+`contracts/lib`: Contains libraries for compound interest calculation and uniswap libraries
+
+`contracts/oracle`: Contains Yield Oracle contracts which keep track of moving average of the base yield on Idle.
 
 ## Local Mainnet Fork
 
